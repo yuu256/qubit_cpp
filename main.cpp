@@ -7,6 +7,12 @@
 using Complex = std::complex<double>;
 using StateVector = std::vector<Complex>;
 
+// 量子ビットのインデックス定義
+const int Q0 = 0;
+const int Q1 = 1;
+const int Q2 = 2;
+const int A0 = 3;
+const int A1 = 4;
 const int NUM_QUBITS = 5;
 const int STATE_SIZE = 1 << NUM_QUBITS;
 
@@ -112,6 +118,7 @@ int measure_qubit(StateVector& state, int target) {
 }
 
 // --- メイン処理：エラー訂正のシナリオ ---
+
 int main() {
     // 状態ベクトルの初期化（全要素0）
     StateVector state(STATE_SIZE, 0.0);
@@ -119,31 +126,64 @@ int main() {
     // 1. 初期状態の設定 (例: alpha|00000> + beta|10000>)
     double alpha = 0.6;
     double beta = 0.8;
-    state[0] = alpha; // |00000> のインデックスは 0
-    state[16] = beta; // |10000> のインデックスは 16 (1 << 4)
+    state[0] = alpha;  // |00000> のインデックスは 0
+    state[16] = beta;  // |10000> のインデックスは 16 (1 << 4)
     
     std::cout << "--- 3-Qubit Bit-Flip Code Simulation ---" << std::endl;
+    std::cout << "初期状態の確率振幅: alpha = " << state[0] << ", beta = " << state[16] << "\n\n";
     
     // 2. 符号化 (Encoding)
-    // TODO: apply_CNOT を使って Q0 の状態を Q1, Q2 にコピー
+    // Q0 の状態を Q1, Q2 にコピーして、大きな重ね合わせ状態を作る
+    apply_CNOT(state, Q0, Q1);
+    apply_CNOT(state, Q0, Q2);
     
     // 3. エラー発生 (Noise)
-    // TODO: 任意のデータ量子ビット（例: Q1）に apply_X を適用
+    // 今回は「Q1」にビット反転エラーが発生したというシナリオにします
+    std::cout << "[Noise] Q1の量子ビットに反転エラーが発生！" << std::endl;
+    apply_X(state, Q1); 
     
     // 4. シンドローム測定の仕込み
-    // TODO: 補助ビット A0, A1 にパリティを書き込む (apply_CNOT)
+    // 補助ビット A0, A1 に隣り合うデータビットのパリティ（異同）を書き込む
+    apply_CNOT(state, Q0, A0);
+    apply_CNOT(state, Q1, A0); // A0 = Q0 ⊕ Q1
+
+    apply_CNOT(state, Q1, A1);
+    apply_CNOT(state, Q2, A1); // A1 = Q1 ⊕ Q2
     
     // 5. 測定の実行
-    // TODO: measure_qubit を使って A0, A1 の測定結果(m1, m2)を取得
-    int m1 = 0; // 仮
-    int m2 = 0; // 仮
+    // 補助ビット A0, A1 を測定し、どこでエラーが起きたかの手がかり（シンドローム）を得る
+    int m1 = measure_qubit(state, A0);
+    int m2 = measure_qubit(state, A1);
+    std::cout << "測定シンドローム: (m1, m2) = (" << m1 << ", " << m2 << ")" << std::endl;
     
     // 6. 復元 (Correction)
-    // TODO: m1, m2 の結果（古典ビット）に応じて if 文で分岐し、適切なデータビットに apply_X を適用
+    // m1, m2 の結果（古典ビット）に応じて条件分岐し、適切なデータビットのエラーを反転させて直す
+    // (m1,m2) = (1,0)->Q0, (1,1)->Q1, (0,1)->Q2, (0,0)->ない
+    if (m1 == 1 && m2 == 0) {
+        std::cout << "-> Q0のエラーを訂正します。" << std::endl;
+        apply_X(state, Q0);
+    }
+    else if (m1 == 1 && m2 == 1) {
+        std::cout << "-> Q1のエラーを訂正します。" << std::endl;
+        apply_X(state, Q1); // 今回はここを通る！
+    }
+    else if (m1 == 0 && m2 == 1) {
+        std::cout << "-> Q2のエラーを訂正します。" << std::endl;
+        apply_X(state, Q2);
+    }
+    else {
+        std::cout << "-> エラーは検出されませんでした。" << std::endl;
+    }
     
-    // 7. 検証
-    // TODO: 符号化の逆操作をして、最終的に state[0] と state[16] (または測定結果に応じた位置) に 
-    // 元の alpha, beta が綺麗に戻っているか std::cout で表示して確認
+    // 7. 検証 (Decoding)
+    // 符号化の逆操作をして、Q0に状態を集約する
+    // 【重要バグ修正】コントロールとターゲットが逆になっていたのを修正
+    apply_CNOT(state, Q0, Q1);
+    apply_CNOT(state, Q0, Q2);
+    
+    std::cout << "\n--- 最終結果の確認 ---" << std::endl;
+    std::cout << "state[0]  (|00000>): " << state[0] << " (元データ: alpha = " << alpha << ")" << std::endl;
+    std::cout << "state[16] (|10000>): " << state[16] << " (元データ: beta  = " << beta << ")" << std::endl;
     
     return 0;
 }
