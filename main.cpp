@@ -130,7 +130,7 @@ int main() {
     state[16] = beta;  // |10000> のインデックスは 16 (1 << 4)
     
     std::cout << "--- 3-Qubit Bit-Flip Code Simulation ---" << std::endl;
-    std::cout << "初期状態の確率振幅: alpha = " << state[0] << ", beta = " << state[16] << "\n\n";
+    std::cout << "Probability amplitude of the initial state: alpha = " << state[0] << ", beta = " << state[16] << "\n\n";
     
     // 2. 符号化 (Encoding)
     // Q0 の状態を Q1, Q2 にコピーして、大きな重ね合わせ状態を作る
@@ -139,7 +139,7 @@ int main() {
     
     // 3. エラー発生 (Noise)
     // 今回は「Q1」にビット反転エラーが発生したというシナリオにします
-    std::cout << "[Noise] Q1の量子ビットに反転エラーが発生！" << std::endl;
+    std::cout << "[Noise] Q1" << std::endl;
     apply_X(state, Q1); 
     
     // 4. シンドローム測定の仕込み
@@ -154,36 +154,40 @@ int main() {
     // 補助ビット A0, A1 を測定し、どこでエラーが起きたかの手がかり（シンドローム）を得る
     int m1 = measure_qubit(state, A0);
     int m2 = measure_qubit(state, A1);
-    std::cout << "測定シンドローム: (m1, m2) = (" << m1 << ", " << m2 << ")" << std::endl;
+    std::cout << "Measurement Syndrome: (m1, m2) = (" << m1 << ", " << m2 << ")" << std::endl;
     
     // 6. 復元 (Correction)
     // m1, m2 の結果（古典ビット）に応じて条件分岐し、適切なデータビットのエラーを反転させて直す
     // (m1,m2) = (1,0)->Q0, (1,1)->Q1, (0,1)->Q2, (0,0)->ない
     if (m1 == 1 && m2 == 0) {
-        std::cout << "-> Q0のエラーを訂正します。" << std::endl;
+        std::cout << "-> Correct Q0 error " << std::endl;
         apply_X(state, Q0);
     }
     else if (m1 == 1 && m2 == 1) {
-        std::cout << "-> Q1のエラーを訂正します。" << std::endl;
+        std::cout << "-> Correct Q1 error" << std::endl;
         apply_X(state, Q1); // 今回はここを通る！
     }
     else if (m1 == 0 && m2 == 1) {
-        std::cout << "-> Q2のエラーを訂正します。" << std::endl;
+        std::cout << "-> Correct Q2 error" << std::endl;
         apply_X(state, Q2);
     }
     else {
-        std::cout << "-> エラーは検出されませんでした。" << std::endl;
+        std::cout << "-> No errors were detected." << std::endl;
     }
     
-    // 7. 検証 (Decoding)
+    // 7. 検証
     // 符号化の逆操作をして、Q0に状態を集約する
-    // 【重要バグ修正】コントロールとターゲットが逆になっていたのを修正
     apply_CNOT(state, Q0, Q1);
     apply_CNOT(state, Q0, Q2);
     
-    std::cout << "\n--- 最終結果の確認 ---" << std::endl;
-    std::cout << "state[0]  (|00000>): " << state[0] << " (元データ: alpha = " << alpha << ")" << std::endl;
-    std::cout << "state[16] (|10000>): " << state[16] << " (元データ: beta  = " << beta << ")" << std::endl;
+    // 【修正】測定結果（補助ビット A0, A1 の状態）に合わせて、確認するインデックスを計算する
+    // A0は2^1の位、A1は2^0の位
+    int syndrome_offset = (m1 << 1) | m2; 
     
-    return 0;
+    int final_idx_0 = 0 + syndrome_offset;   // alphaが戻ってくる位置
+    int final_idx_16 = 16 + syndrome_offset; // betaが戻ってくる位置
+    
+    std::cout << "\n--- Final Result ---" << std::endl;
+    std::cout << "state[" << final_idx_0 << "]  : " << state[final_idx_0] << " (alpha = " << alpha << ")" << std::endl;
+    std::cout << "state[" << final_idx_16 << "] : " << state[final_idx_16] << " (beta  = " << beta << ")" << std::endl;
 }
