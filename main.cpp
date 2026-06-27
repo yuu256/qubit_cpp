@@ -35,10 +35,30 @@ void apply_X(StateVector& state, int target) {
 }
 
 // CNOTゲート：controlビットが1の項だけ、targetビットの0と1を入れ替える
+// TODO: 0～31までループを回す
+// 「controlビットが1」かつ「targetビットが0」であるインデックスを見つけたら、
+// 「controlビットが1」かつ「targetビットが1」であるインデックスと中身をスワップする。
+// CNOTゲート：controlビットが1の項だけ、targetビットの0と1を入れ替える
 void apply_CNOT(StateVector& state, int control, int target) {
-    // TODO: 0～31までループを回す
-    // 「controlビットが1」かつ「targetビットが0」であるインデックスを見つけたら、
-    // 「controlビットが1」かつ「targetビットが1」であるインデックスと中身をスワップする。
+    // 0～31まで1重ループで回す
+    for (int index = 0; index < 32; ++index) {
+        
+        // ① controlビットの値（0か1）を取り出す
+        int control_val = (index >> (NUM_QUBITS - 1 - control)) & 1;
+        
+        // ② targetビットの値（0か1）を取り出す
+        int target_val = (index >> (NUM_QUBITS - 1 - target)) & 1;
+        
+        // ③ 「controlビットが1」かつ「targetビットが0」であるインデックスを見つけたら
+        if (control_val == 1 && target_val == 0) {
+            
+            // ペアとなる「targetビットが1であるインデックス」を作る
+            int pair_index = index | (1 << (NUM_QUBITS - 1 - target));
+            
+            // 中身（振幅）をスワップする
+            std::swap(state[index], state[pair_index]);
+        }
+    }
 }
 
 // 1量子ビット測定：確率に基づき0か1を返し、状態ベクトルを収縮・規格化する
