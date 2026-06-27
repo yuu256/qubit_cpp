@@ -65,15 +65,48 @@ void apply_CNOT(StateVector& state, int control, int target) {
 int measure_qubit(StateVector& state, int target) {
     double prob_0 = 0.0;
     
-    // TODO: 1. targetビットが0である全てのインデックスの「振幅の絶対値2乗」を足し合わせ、prob_0 を計算する
+    // ---- TODO: 1. targetビットが0である全ての「振幅の絶対値2乗」を足し合わせ、prob_0 を計算する ----
+    for (int index = 0; index < 32; ++index) {
+        int bit_val = (index >> (NUM_QUBITS - 1 - target)) & 1;
+        
+        if (bit_val == 0) {
+            // std::norm は複素数の絶対値の2乗（|z|^2）を返すため、確率の計算に最適
+            prob_0 += std::norm(state[index]);
+        }
+    }
     
-    // TODO: 2. 乱数（0.0～1.0）を生成し、prob_0 より小さければ結果は 0、大きければ 1 とする
-    int result = 0; 
+    // ---- TODO: 2. 乱数（0.0～1.0）を生成し、prob_0 より小さければ結果は 0、大きければ 1 とする ----
+    // 現代的なC++の乱数生成（メルセンヌ・ツイスタ）
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    double rnd = dist(gen);
     
-    // TODO: 3. 選ばれなかった方の状態の振幅をすべて 0 にする
-    //（例：resultが0なら、targetビットが1の項の振幅を 0 にする）
+    int result = (rnd < prob_0) ? 0 : 1;
     
-    // TODO: 4. 残った状態ベクトルのノルム（全体の長さ）を計算し、合計が1になるよう全体を割り算（規格化）する
+    // ---- TODO: 3. 選ばれなかった方の状態の振幅をすべて 0 にする ----
+    for (int index = 0; index < 32; ++index) {
+        int bit_val = (index >> (NUM_QUBITS - 1 - target)) & 1;
+        
+        // 測定結果（result）と一致しないビットを持つ項の振幅を消滅（0）させる
+        if (bit_val != result) {
+            state[index] = 0.0;
+        }
+    }
+    
+    // ---- TODO: 4. 残った状態ベクトルのノルムを計算し、合計が1になるよう全体を規格化する ----
+    // 選ばれた世界の確率（resultが0ならprob_0、1なら1.0 - prob_0）
+    double chosen_prob = (result == 0) ? prob_0 : (1.0 - prob_0);
+    
+    // ゼロ除算を防ぐためのチェック（確率が極めて低い世界が選ばれた場合の上限ガード）
+    if (chosen_prob > 1e-15) {
+        // 全体のノルム（ベクトルの長さ）は「選ばれた確率の平方根」になる
+        double norm = std::sqrt(chosen_prob);
+        
+        for (int index = 0; index < 32; ++index) {
+            state[index] /= norm;
+        }
+    }
     
     return result;
 }
