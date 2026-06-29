@@ -1,4 +1,4 @@
-#include <iostream>
+/*#include <iostream>
 #include <vector>
 #include <complex>
 #include <cmath>
@@ -143,7 +143,7 @@ void encode(StateVector& state) {
     apply_X(state, Q1); 
     /*確率pでランダムなエラー。エラーは別関数で*/
 //}*/
-
+/*
 // 3. エラー発生 (Noise)
 // データ量子ビット（Q0, Q1, Q2）それぞれに対して、独立して確率 p でXエラーを発生させる
 void inject_error(StateVector& state, double p) {
@@ -252,27 +252,39 @@ double run_simulation(int trials, double p) {
         if(!run_once(p)) {error_count++;}
     }
     return static_cast<double>(error_count) / trials;
-}
+}*/
 
 
 // --- メイン処理（きわめてシンプルに洗練） ---
 
+
+#include <iostream>
+#include "code/quantum_code.h"
+#include "error/error_model.h"
+#include "simulator/simulator.h"
+
 int main() {
-    // 統計の精度を上げるため、1つの確率 p につき 10000 回テストする
     int trials = 10000;
 
-    std::cout << "--- 3-Qubit Bit-Flip Code Simulation ---" << std::endl;
-    std::cout << "Trials per probability: " << trials << "\n\n";
+    // 1. 使用する量子誤り訂正コードのインスタンス化
+    BitFlip3Code code;
 
-    // 結果を見やすく表形式で出力
+    std::cout << "--- Quantum Error Correction Statistical Simulator ---" << std::endl;
+    std::cout << "Trials per probability: " << trials << "\n\n";
     std::cout << "Physical Error (p) | Logical Error Rate\n";
     std::cout << "-------------------|-------------------\n";
 
-    // p を 0.00 から 0.50 まで 0.05 刻みで変化させてシミュレーション
+    // 2. 物理エラー率 p を変化させてモンテカルロ・シミュレーションを実行
     for (double p = 0.00; p <= 0.50; p += 0.05) {
-        double logical_error_rate = run_simulation(trials, p);
+        // 各ループステップで、その確率 p のエラーモデルを作成
+        ErrorModel error_model(p, ErrorType::BitFlip);
         
-        // 出力
+        // コードとエラーモデルをシミュレータにバインド
+        Simulator simulator(code, error_model);
+        
+        // シミュレーション実行
+        double logical_error_rate = simulator.run_simulation(trials);
+        
         std::cout << "       " << p << "        |      " << logical_error_rate << "\n";
     }
 
