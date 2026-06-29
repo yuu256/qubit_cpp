@@ -137,12 +137,25 @@ void encode(StateVector& state) {
     apply_CNOT(state, Q0, Q2);
 }
 
-// 3. エラー発生 (Noise)
-// 今回は「Q1」にビット反転エラーが発生したというシナリオにします
-// (将来的には確率 p に基づいてランダムにエラーを注入できるように拡張します)
-void inject_error(StateVector& state, double p = 0.0) {
+
+/*void inject_error(StateVector& state, double p = 0.0) {
     std::cout << "[Noise] Q1" << std::endl;
     apply_X(state, Q1); 
+    /*確率pでランダムなエラー。エラーは別関数で*/
+//}*/
+
+// 3. エラー発生 (Noise)
+// データ量子ビット（Q0, Q1, Q2）それぞれに対して、独立して確率 p でXエラーを発生させる
+void inject_error(StateVector& state, double p) {
+    // 高精度な乱数生成器の準備
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+
+    // 乱数が確率 p より小さければ、そのビットにエラー（Xゲート）を適用する
+    if (dist(gen) < p) apply_X(state, Q0);
+    if (dist(gen) < p) apply_X(state, Q1);
+    if (dist(gen) < p) apply_X(state, Q2);
 }
 
 // 4 & 5. シンドローム測定の仕込みと実行
@@ -158,7 +171,7 @@ std::pair<int, int> measure_syndrome(StateVector& state) {
     // 測定の実行
     int m1 = measure_qubit(state, A0); // =1 (今回のerrorはQ1)
     int m2 = measure_qubit(state, A1); // =1
-    std::cout << "Measurement Syndrome: (m1, m2) = (" << m1 << ", " << m2 << ")" << std::endl;
+    //std::cout << "Measurement Syndrome: (m1, m2) = (" << m1 << ", " << m2 << ")" << std::endl;
     
     return {m1, m2};
 }
@@ -168,19 +181,19 @@ std::pair<int, int> measure_syndrome(StateVector& state) {
 void correct(StateVector& state, int m1, int m2) {
     // (m1,m2) = (1,0)->Q0, (1,1)->Q1, (0,1)->Q2, (0,0)->ない
     if (m1 == 1 && m2 == 0) {
-        std::cout << "-> Correct Q0 error " << std::endl;
+        //std::cout << "-> Correct Q0 error " << std::endl;
         apply_X(state, Q0);
     }
     else if (m1 == 1 && m2 == 1) {
-        std::cout << "-> Correct Q1 error" << std::endl;
+        //std::cout << "-> Correct Q1 error" << std::endl;
         apply_X(state, Q1); // 今回はここを通る！
     }
     else if (m1 == 0 && m2 == 1) {
-        std::cout << "-> Correct Q2 error" << std::endl;
+        //std::cout << "-> Correct Q2 error" << std::endl;
         apply_X(state, Q2);
     }
     else {
-        std::cout << "-> No errors were detected." << std::endl;
+        //std::cout << "-> No errors were detected." << std::endl;
     }
 }
 
@@ -196,11 +209,38 @@ void decode(StateVector& state) {
 
 // 1. run_once() を作り、1回の誤り訂正を実行して成功・失敗を返す。
 // 3. ランダムなビット反転エラー（確率 p）をここに導入する予定。
+// TODO: ここに1回分のシミュレーションの流れを記述する
+
+
+// 1回の誤り訂正シミュレーションを実行し、成功(true)か失敗(false)を返す
 bool run_once(double p) {
-    // TODO: ここに1回分のシミュレーションの流れを記述する
-    // StateVector の初期化、encode、確率 p でのエラー注入、measure_syndrome、correct、decode
-    // 最終的に元の alpha, beta に正しく戻っていれば true、失敗していれば false を返すように肉付けする
-    return true;
+    StateVector state(STATE_SIZE, 0.0);
+    
+    // 初期状態の設定
+    double alpha = 0.6;
+    double beta = 0.8;
+    state[0] = alpha;  
+    state[16] = beta;  
+    
+    // 一連の量子回路フロー
+    encode(state);
+    inject_error(state, p); // 確率 p に基づいてランダムエラーを注入
+    auto [m1, m2] = measure_syndrome(state);
+    correct(state, m1, m2);
+    decode(state);
+
+    // 検証するインデックスの計算
+    int syndrome_offset = (m1 << 1) | m2; 
+    int final_idx_0 = 0 + syndrome_offset;   
+    int final_idx_16 = 16 + syndrome_offset;
+
+    // 【修正】インデックスではなく、配列の「中身（実数部）」が元に戻ったかを判定する
+    // 浮動小数点の誤差を考慮し、差が 1e-5 未満であれば「等しい（成功）」とみなす
+    double epsilon = 1e-5;
+    bool is_alpha_correct = std::abs(state[final_idx_0].real() - alpha) < epsilon;
+    bool is_beta_correct  = std::abs(state[final_idx_16].real() - beta) < epsilon;
+
+    return is_alpha_correct && is_beta_correct;
 }
 
 // 2. run_simulation(int trials, double p) を作り、指定回数繰り返して論理エラー率を計算する。
@@ -208,41 +248,33 @@ bool run_once(double p) {
 double run_simulation(int trials, double p) {
     int error_count = 0;
     // TODO: trials 回数だけループを回し、!run_once(p) の場合に error_count をインクリメントする
-    // return static_cast<double>(error_count) / trials;
-    return 0.0;
+    for (int i = 0;i < trials;i++) {
+        if(!run_once(p)) {error_count++;}
+    }
+    return static_cast<double>(error_count) / trials;
 }
 
 
 // --- メイン処理（きわめてシンプルに洗練） ---
 
 int main() {
-    // 状態ベクトルの初期化
-    StateVector state(STATE_SIZE, 0.0);
-    
-    // 1. 初期状態の設定 (例: alpha|00000> + beta|10000>)
-    double alpha = 0.6;
-    double beta = 0.8;
-    state[0] = alpha;  // |00000> のインデックスは 0
-    state[16] = beta;  // |10000> のインデックスは 16 (1 << 4)
-    
+    // 統計の精度を上げるため、1つの確率 p につき 10000 回テストする
+    int trials = 10000;
+
     std::cout << "--- 3-Qubit Bit-Flip Code Simulation ---" << std::endl;
-    std::cout << "Probability amplitude of the initial state: alpha = " << state[0] << ", beta = " << state[16] << "\n\n";
-    
-    // --- 洗練されたアルゴリズムフロー ---
-    encode(state);
-    inject_error(state, 0.0); // 現段階では確定エラー
-    auto [m1, m2] = measure_syndrome(state);
-    correct(state, m1, m2);
-    decode(state);
-    
-    // 【検証用の出力】
-    int syndrome_offset = (m1 << 1) | m2; 
-    int final_idx_0 = 0 + syndrome_offset;   
-    int final_idx_16 = 16 + syndrome_offset; 
-    
-    std::cout << "\n--- Final Result ---" << std::endl;
-    std::cout << "state[" << final_idx_0 << "]  : " << state[final_idx_0] << " (alpha = " << alpha << ")" << std::endl;
-    std::cout << "state[" << final_idx_16 << "] : " << state[final_idx_16] << " (beta  = " << beta << ")" << std::endl;
-    
+    std::cout << "Trials per probability: " << trials << "\n\n";
+
+    // 結果を見やすく表形式で出力
+    std::cout << "Physical Error (p) | Logical Error Rate\n";
+    std::cout << "-------------------|-------------------\n";
+
+    // p を 0.00 から 0.50 まで 0.05 刻みで変化させてシミュレーション
+    for (double p = 0.00; p <= 0.50; p += 0.05) {
+        double logical_error_rate = run_simulation(trials, p);
+        
+        // 出力
+        std::cout << "       " << p << "        |      " << logical_error_rate << "\n";
+    }
+
     return 0;
 }
