@@ -23,6 +23,7 @@ public:
     virtual std::pair<int, int> get_verification_indices(int m1, int m2) const = 0;
 
     virtual void apply_X(StateVector& state, int target) = 0;
+    virtual void apply_Z(StateVector& state, int target) = 0;
     virtual void apply_CNOT(StateVector& state, int control, int target) = 0;
 
 };
@@ -43,6 +44,7 @@ public:
     std::pair<int, int> get_verification_indices(int m1, int m2) const override;
 
     void apply_X(StateVector& state, int target) override;
+    void apply_Z(StateVector& state, int target) override;
     void apply_CNOT(StateVector& state, int control, int target) override;
 
 

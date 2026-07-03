@@ -52,6 +52,17 @@ void BitFlip3Code::apply_CNOT(StateVector& state, int control, int target) {
     }
 }
 
+// src/code/quantum_code.cpp の末尾に実装を肉付け
+void BitFlip3Code::apply_Z(StateVector& state, int target) {
+    int state_size = get_state_size();
+    for (int index = 0; index < state_size; ++index) {
+        // targetビットが「1」の項の符号（位相）だけを反転させる
+        if (get_bit(index, target) == 1) {
+            state[index] *= -1.0;
+        }
+    }
+}
+
 // 1量子ビット測定：確率に基づき0か1を返し、状態ベクトルを収縮・規格化する
 int BitFlip3Code::measure_qubit(StateVector& state, int target) {
     double prob_0 = 0.0;
