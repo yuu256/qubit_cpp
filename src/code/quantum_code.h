@@ -21,6 +21,10 @@ public:
     virtual int get_num_qubits() const = 0;
     virtual int get_state_size() const = 0;
     virtual std::pair<int, int> get_verification_indices(int m1, int m2) const = 0;
+
+    virtual void apply_X(StateVector& state, int target) = 0;
+    virtual void apply_CNOT(StateVector& state, int control, int target) = 0;
+
 };
 
 // 従来の「3量子ビット ビット反転符号」は、この基底クラスを継承して作ります
@@ -38,6 +42,10 @@ public:
     int get_state_size() const override { return 1 << NUM_QUBITS; }
     std::pair<int, int> get_verification_indices(int m1, int m2) const override;
 
+    void apply_X(StateVector& state, int target) override;
+    void apply_CNOT(StateVector& state, int control, int target) override;
+
+
 private:
     // ビット操作のヘルパー関数（インライン関数としてカプセル化）
     inline int get_bit(int index, int qubit) {
@@ -48,7 +56,5 @@ private:
     }
 
     // 内部で利用する個別ゲートや測定関数
-    void apply_X(StateVector& state, int target);
-    void apply_CNOT(StateVector& state, int control, int target);
     int measure_qubit(StateVector& state, int target);
 };

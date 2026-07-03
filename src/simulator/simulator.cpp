@@ -21,7 +21,10 @@ bool Simulator::run_once() {
     
     // 3. エラー発生 (Noise)
     // 確率 p のエラーモデルを、データビット数（3つ）に対して適用する
-    error_model.inject_error(state, 3); 
+    // simulator.cpp 内の修正箇所
+    // error_model.inject_error(state, 3); から以下に変更：
+    error_model.inject_error(state, quantum_code);
+    //error_model.inject_error(state, 3); 
     
     // 4 & 5. シンドローム測定の仕込みと実行
     auto [m1, m2] = quantum_code.measure_syndrome(state);
