@@ -2,6 +2,7 @@
 #include <vector>
 #include <complex>
 #include <utility>
+#include "../util/pauli.h"
 
 using Complex = std::complex<double>;
 using StateVector = std::vector<Complex>;
@@ -24,6 +25,7 @@ public:
 
     virtual void apply_X(StateVector& state, int target) = 0;
     virtual void apply_Z(StateVector& state, int target) = 0;
+    virtual std::vector<PauliString> get_stabilizers() const = 0;
     virtual void apply_CNOT(StateVector& state, int control, int target) = 0;
 
 };
@@ -46,6 +48,11 @@ public:
     void apply_X(StateVector& state, int target) override;
     void apply_Z(StateVector& state, int target) override;
     void apply_CNOT(StateVector& state, int control, int target) override;
+    std::vector<PauliString> get_stabilizers() const override {
+        // 3ビットビット反転符号を特徴づける2つのスタビライザ生成元
+        // ※ 補助ビットを含めた5ビット空間での表記 ("ZZIII" = Q0,Q1のパリティ, "IZZII" = Q1,Q2のパリティ)
+        return { PauliString("ZZIII"), PauliString("IZZII") };
+    }
 
 
 private:
