@@ -7,7 +7,7 @@
 using Complex = std::complex<double>;
 using StateVector = std::vector<Complex>;
 
-// Phase 5: 任意コード対応のための抽象基底クラス
+// 任意コード対応のための抽象基底クラス
 class QuantumCode {
 public:
     virtual ~QuantumCode() = default;
@@ -30,10 +30,10 @@ public:
 
 };
 
-// 従来の「3量子ビット ビット反転符号」は、この基底クラスを継承して作ります
+// 3量子ビット ビット反転符号
 class BitFlip3Code : public QuantumCode {
 public:
-    // 量子ビットのインデックス定義（enumによる安全な管理）
+    // 量子ビットのインデックス定義
     enum Qubit { Q0, Q1, Q2, A0, A1, NUM_QUBITS };
 
     void encode(StateVector& state) override;
@@ -50,7 +50,7 @@ public:
     void apply_CNOT(StateVector& state, int control, int target) override;
     std::vector<PauliString> get_stabilizers() const override {
         // 3ビットビット反転符号を特徴づける2つのスタビライザ生成元
-        // ※ 補助ビットを含めた5ビット空間での表記 ("ZZIII" = Q0,Q1のパリティ, "IZZII" = Q1,Q2のパリティ)
+        // 補助ビットを含めた5ビット空間での表記 ("ZZIII" = Q0,Q1のパリティ, "IZZII" = Q1,Q2のパリティ)
         return { PauliString("ZZIII"), PauliString("IZZII") };
     }
 

@@ -18,7 +18,7 @@ void ErrorModel::inject_error(StateVector& state, QuantumCode& code) {
         // --- モード 2: 位相反転ノイズ (Z) ---
         else if (error_type == ErrorType::PhaseFlip) {
             if (rand.next_double() < p) {
-                code.apply_Z(state, qubit); // 新設したZエラーを注入！
+                code.apply_Z(state, qubit);
             }
         }
         

@@ -21,8 +21,6 @@ bool Simulator::run_once() {
     
     // 3. エラー発生 (Noise)
     // 確率 p のエラーモデルを、データビット数（3つ）に対して適用する
-    // simulator.cpp 内の修正箇所
-    // error_model.inject_error(state, 3); から以下に変更：
     error_model.inject_error(state, quantum_code);
     //error_model.inject_error(state, 3); 
     
@@ -35,7 +33,7 @@ bool Simulator::run_once() {
     // 7. 検証 (Decoding)
     quantum_code.decode(state);
 
-    // 【修正】測定結果（補助ビット A0, A1 の状態）に合わせて、確認するインデックスをコード側から取得
+    // 測定結果（補助ビット A0, A1 の状態）に合わせて、確認するインデックスをコード側から取得
     auto [final_idx_0, final_idx_16] = quantum_code.get_verification_indices(m1, m2);
 
     // インデックスではなく、配列の「中身（実数部）」が元に戻ったかを判定する

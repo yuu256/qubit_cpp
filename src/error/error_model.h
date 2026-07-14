@@ -13,7 +13,7 @@ public:
     ErrorModel(double error_rate, ErrorType type = ErrorType::BitFlip)
         : p(error_rate), error_type(type) {}
 
-    // 【修正】QuantumCode& code を受け取るように変更し、どんな量子符号にも対応できるようにする
+    // QuantumCode& code を受け取るように変更し、どんな量子符号にも対応できるようにする
     void inject_error(StateVector& state, QuantumCode& code);
 
 private:
